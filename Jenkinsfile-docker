@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+
+    tools {
+        maven "Maven"
+    }
+    
+    stages {
+        stage('SCM checkout') {
+           steps {
+           git changelog: false, credentialsId: 'Gitcredentials', poll: false, url: 'https://github.com/deepuchakram/GeneralSpringBootProgExce.git'
+           }
+        }
+        stage('UnitTesting') {
+            steps {
+                shell 'mvn compile test'
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                //withSonarQubeEnv('sonar7') {
+                    shell 'mvn sonar:sonar'
+                //}
+            }
+        }
+        stage('Build Stage') {
+            steps {
+                shell "mvn clean install"
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                shell 'docker build -t 13.233.115.68:8083/springapp:1.0.0 .'
+            }
+        }
+        stage('Docker Push to Nexus') {
+            steps {
+                shell 'docker login -u admin -p admin123 13.233.115.68:8083'
+                
+                shell 'docker push 18.222.180.174:8083/springapp:1.0.0'
+            }
+        }
+        stage('Run docker container') {
+            steps {
+                shell 'docker run -d --name springapp -p 8080:8080 18.222.180.174:8083/springapp:1.0.0'
+            }
+        
+        }
+    }
+}
